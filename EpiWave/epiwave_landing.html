@@ -1,11 +1,294 @@
-import streamlit as st
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EpiWave - EEG Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-st.set_page_config(page_title="EpiWave", layout="wide")
+        body {
+            font-family: 'Segoe UI', 'SF Mono', monospace;
+            background: #0a0f0d;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
 
-st.title("🧠 EpiWave")
-st.subheader("AI-Powered EEG Analysis for Education")
+        #eegCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            display: block;
+        }
 
-st.write("Welcome to EpiWave!")
+        .content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
 
-st.success("Streamlit is Working")
-   
+        .title {
+            font-size: 5rem;
+            font-weight: 300;
+            color: white;
+            text-align: center;
+            letter-spacing: 0.2em;
+            font-family: 'Segoe UI', monospace;
+            font-weight: 200;
+            margin-bottom: 0.25em;
+            text-shadow: 0 0 20px rgba(0, 200, 150, 0.3);
+        }
+
+        .title span {
+            font-weight: 600;
+            color: #3affd0;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #5a9e8a;
+            font-family: 'SF Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            margin-bottom: 3rem;
+            text-transform: uppercase;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            background: rgba(10, 20, 18, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(58, 255, 208, 0.35);
+            color: #ccfff0;
+            font-size: 1rem;
+            font-weight: 400;
+            padding: 0.8rem 2.2rem;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'SF Mono', monospace;
+            letter-spacing: 0.1em;
+        }
+
+        .btn:hover {
+            background: rgba(58, 255, 208, 0.12);
+            border-color: rgba(58, 255, 208, 0.7);
+            transform: translateY(-1px);
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #3a6a5a;
+            font-family: monospace;
+            font-size: 0.65rem;
+            z-index: 10;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .title { font-size: 2.5rem; letter-spacing: 0.1em; }
+            .btn { font-size: 0.75rem; padding: 0.5rem 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="eegCanvas"></canvas>
+
+    <div class="content">
+        <div class="title">EPI<span>WAVE</span></div>
+        <div class="subtitle">AI-POWERED EEG SEIZURE DETECTION</div>
+        
+        <div class="button-container">
+            <button class="btn" id="uploadBtn">UPLOAD EEG FILE</button>
+            <button class="btn" id="liveBtn">LIVE MONITORING</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        EDUCATIONAL PLATFORM • NOT FOR CLINICAL USE
+    </div>
+
+    <input type="file" id="fileInput" accept=".edf,.csv,.txt">
+
+    <script>
+        const canvas = document.getElementById('eegCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let time = 0;
+        
+        const channels = [
+            'Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2'
+        ];
+        
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        
+        function drawEEG() {
+            if (!ctx) return;
+            
+            // Background
+            ctx.fillStyle = '#0a120e';
+            ctx.fillRect(0, 0, width, height);
+            
+            const channelCount = channels.length;
+            const channelHeight = height / channelCount;
+            
+            // Vertical grid
+            ctx.beginPath();
+            ctx.strokeStyle = '#1a4a3a';
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x < width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            
+            // Horizontal grid
+            for (let i = 1; i < channelCount; i++) {
+                const yPos = i * channelHeight;
+                ctx.beginPath();
+                ctx.moveTo(0, yPos);
+                ctx.lineTo(width, yPos);
+                ctx.stroke();
+            }
+            
+            // Channel labels
+            ctx.font = '11px "SF Mono", monospace';
+            ctx.fillStyle = '#3a9e7a';
+            for (let i = 0; i < channelCount; i++) {
+                const yPos = (i + 0.5) * channelHeight;
+                ctx.fillText(channels[i], 12, yPos + 4);
+                ctx.fillText(channels[i], width - 35, yPos + 4);
+            }
+            
+            // Draw EEG waveforms
+            for (let idx = 0; idx < channelCount; idx++) {
+                const yBase = (idx + 0.5) * channelHeight;
+                const amplitude = channelHeight * 0.2;
+                
+                ctx.beginPath();
+                ctx.strokeStyle = '#3affd0';
+                ctx.lineWidth = 1.0;
+                
+                let first = true;
+                const speed = 0.5 + idx * 0.05;
+                const phaseOffset = idx * 0.5;
+                
+                for (let x = 0; x < width; x += 2) {
+                    const t = time * speed;
+                    const position = x / width;
+                    
+                    // Smooth frequency components
+                    const delta = Math.sin(t * 0.25 + phaseOffset) * 0.35;
+                    const theta = Math.sin(t * 0.6 + position * 1.5) * 0.3;
+                    const alpha = Math.sin(t * 1.0 + position * 2.5) * 0.45;
+                    const beta = Math.sin(t * 1.8 + position * 4) * 0.2;
+                    const smoothWave = Math.sin(t * 0.45 + position * 1.2) * 0.2;
+                    
+                    let signal = (delta + theta + alpha + beta + smoothWave) * amplitude;
+                    const yDraw = yBase + signal;
+                    
+                    if (first) {
+                        ctx.moveTo(x, yDraw);
+                        first = false;
+                    } else {
+                        ctx.lineTo(x, yDraw);
+                    }
+                }
+                ctx.stroke();
+            }
+            
+            // Time marker
+            const markerX = (time * 30) % width;
+            ctx.beginPath();
+            ctx.strokeStyle = '#3affd0';
+            ctx.lineWidth = 0.6;
+            ctx.setLineDash([4, 8]);
+            ctx.moveTo(markerX, 0);
+            ctx.lineTo(markerX, height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Calibration marker
+            const calX = width - 70;
+            const calY = 25;
+            ctx.beginPath();
+            ctx.strokeStyle = '#3a9e7a';
+            ctx.lineWidth = 0.8;
+            ctx.moveTo(calX, calY);
+            ctx.lineTo(calX + 40, calY);
+            ctx.moveTo(calX + 20, calY - 20);
+            ctx.lineTo(calX + 20, calY + 20);
+            ctx.stroke();
+            ctx.fillStyle = '#3a9e7a';
+            ctx.font = '8px monospace';
+            ctx.fillText('50µV', calX + 45, calY + 4);
+            
+            // Settings
+            ctx.fillStyle = '#2a7a5a';
+            ctx.font = '8px monospace';
+            ctx.fillText('Sensitivity: 10µV/mm', width - 150, 12);
+            ctx.fillText('TC: 0.3s', width - 150, 24);
+            ctx.fillText('HF: 70Hz', width - 150, 36);
+            
+            time += 0.022;
+            requestAnimationFrame(drawEEG);
+        }
+        
+        window.addEventListener('resize', () => resizeCanvas());
+        resizeCanvas();
+        drawEEG();
+        
+        // Button handlers
+        const uploadBtn = document.getElementById('uploadBtn');
+        const liveBtn = document.getElementById('liveBtn');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                alert(`EEG Study: ${e.target.files[0].name}`);
+                fileInput.value = '';
+            }
+        });
+        
+        liveBtn.addEventListener('click', () => {
+            alert('Live Monitoring: 3D brain visualization coming next');
+        });
+    </script>
+</body>
+</html>
