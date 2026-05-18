@@ -70,7 +70,7 @@
             text-transform: uppercase;
         }
 
-        /* Upload Box - matches the theme */
+        
         .upload-box {
             background: rgba(10, 20, 18, 0.85);
             backdrop-filter: blur(15px);
@@ -140,7 +140,7 @@
             transform: translateY(-1px);
         }
 
-        /* Result cards - matching medical theme */
+        
         .result-card {
             background: rgba(10, 20, 18, 0.85);
             backdrop-filter: blur(15px);
@@ -156,10 +156,10 @@
             color: #3affd0;
             font-size: 1.1rem;
             margin-bottom: 1rem;
-           'Lora', serif;
+           font-family: 'Lora', serif;
         }
 
-        /* Prediction badges */
+       
         .prediction {
             text-align: center;
             padding: 1rem;
@@ -196,7 +196,7 @@
 
         .file-name {
             color: #3affd0;
-            font-family: monospace;
+            font-family: 'Lora', serif;
             margin-top: 0.5rem;
             font-size: 0.85rem;
         }
@@ -236,7 +236,7 @@
             display: none;
         }
 
-        /* Scalogram canvas */
+        
         .scalogram-canvas {
             background: #0a120e;
             border-radius: 12px;
@@ -289,7 +289,7 @@
 
     <div class="footer">EDUCATIONAL PLATFORM • CWT SCALOGRAM • NOT FOR CLINICAL USE</div>
 
-    <input type="file" id="fileInput" accept=".edf,.csv,.txt">
+    
 
     <script>
        
@@ -338,7 +338,7 @@
             }
             
         
-            ctx.font = '11px Lora', serif;;
+            ctx.font =  '11px "Lora", serif';
             ctx.fillStyle = '#3a9e7a';
             for (let i = 0; i < channelCount; i++) {
                 const yPos = (i + 0.5) * channelHeight;
@@ -359,12 +359,12 @@
             ctx.lineTo(calX + 20, calY + 20);
             ctx.stroke();
             ctx.fillStyle = '#3a9e7a';
-            ctx.font = '8px Lora';
+            ctx.font = '11px "Lora", serif';
             ctx.fillText('50µV', calX + 45, calY + 4);
             
          
             ctx.fillStyle = '#2a7a5a';
-            ctx.font = '8px Lora';
+            ctx.font = '8px "Lora", serif';
             ctx.fillText('Sensitivity: 10µV/mm', width - 150, 12);
             ctx.fillText('TC: 0.3s', width - 150, 24);
             ctx.fillText('HF: 70Hz', width - 150, 36);
@@ -531,7 +531,7 @@
                     const idx = (y * width + x) * 4;
                     imageData.data[idx] = intensity;     // R
                     imageData.data[idx+1] = intensity * 0.6; // G
-                    imageData.data[idx+2] = intensity * 0.3; // B
+                    imageData.data[idx+2] = intensity * 0.3; 
                     imageData.data[idx+3] = 255;             // A
                 }
             }
