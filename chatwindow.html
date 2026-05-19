@@ -347,7 +347,7 @@
             showThinking();
 
             try {
-                const res = await fetch('https://abc123.ngrok.io', {
+                const res = await fetch('https://abc123.ngrok.io/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query: userMsg, history: history })
