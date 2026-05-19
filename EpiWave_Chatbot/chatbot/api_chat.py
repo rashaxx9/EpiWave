@@ -6,10 +6,16 @@ from agents.verify import verify_chunks
 from rag.vectorize import _get_chroma_collection
 
 app = Flask(__name__)
-CORS(app)
 
-@app.route('/chat', methods=['POST'])
+# Enable CORS for all origins - more explicit
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+@app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        return '', 200
+        
     data = request.json
     user_query = data.get('query', '')
     history = data.get('history', [])
@@ -26,7 +32,7 @@ def chat():
 
 @app.route('/', methods=['GET'])
 def home():
-     return "EpiWave AI Server is running!"
+    return "EpiWave AI Server is running!"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
