@@ -1,8 +1,7 @@
 {
   "build": {
     "builder": "NIXPACKS",
-    "nixpacksConfigPath": "backend/chatbot/nixpacks.toml",
-    "buildCommand": "cd backend/chatbot && pip install --break-system-packages -r requirements.txt"
+    "buildCommand": "cd backend/chatbot && pip install -r requirements.txt"
   },
   "deploy": {
     "startCommand": "cd backend/chatbot && gunicorn api_chat:app",
