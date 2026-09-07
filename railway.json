@@ -1,0 +1,11 @@
+{
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "cd EpiWave_Chatbot/chatbot && pip install -r requirements.txt"
+  },
+  "deploy": {
+    "startCommand": "cd EpiWave_Chatbot/chatbot && gunicorn api_chat:app",
+    "healthcheckPath": "/health",
+    "restartPolicyType": "ON_FAILURE"
+  }
+}

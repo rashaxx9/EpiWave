@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EpiWave - Upload EEG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Lora', serif;
+            background: #0a0f0d;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #eegCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            display: block;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .title {
+            font-size: 5rem;
+            font-weight: 300;
+            color: white;
+            text-align: center;
+            letter-spacing: 0.2em;
+            font-family: 'Lora', serif;
+            font-weight: 200;
+            margin-bottom: 0.25em;
+            text-shadow: 0 0 20px rgba(0, 200, 150, 0.3);
+        }
+
+        .title span {
+            font-weight: 600;
+            color: #3affd0;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #5a9e8a;
+            font-family: 'Lora', serif;
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+        }
+
+        .upload-box {
+            background: rgba(10, 20, 18, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(58, 255, 208, 0.3);
+            border-radius: 24px;
+            padding: 2.5rem 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            max-width: 500px;
+            width: 100%;
+            margin: 1rem auto;
+        }
+
+        .upload-box:hover {
+            border-color: rgba(58, 255, 208, 0.8);
+            background: rgba(58, 255, 208, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .upload-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            color: #ccfff0;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-hint {
+            color: #5a9e8a;
+            font-size: 0.8rem;
+            font-family: 'Lora', serif;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            background: rgba(10, 20, 18, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(58, 255, 208, 0.35);
+            color: #ccfff0;
+            font-size: 0.9rem;
+            font-weight: 400;
+            padding: 0.7rem 1.8rem;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Lora', serif;
+            letter-spacing: 0.1em;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: rgba(58, 255, 208, 0.12);
+            border-color: rgba(58, 255, 208, 0.7);
+            transform: translateY(-1px);
+        }
+
+        .result-card {
+            background: rgba(10, 20, 18, 0.85);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid #3affd0;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .result-title {
+            color: #3affd0;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            font-family: 'Lora', serif;
+        }
+
+        .prediction {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 60px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+
+        .prediction.normal {
+            background: rgba(58, 255, 208, 0.15);
+            border: 1px solid #3affd0;
+            color: #3affd0;
+        }
+
+        .prediction.preictal {
+            background: rgba(255, 170, 68, 0.15);
+            border: 1px solid #ffaa44;
+            color: #ffaa44;
+        }
+
+        .prediction.ictal {
+            background: rgba(255, 51, 102, 0.15);
+            border: 1px solid #ff3366;
+            color: #ff3366;
+        }
+
+        .confidence {
+            text-align: center;
+            color: #5a9e8a;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .file-name {
+            color: #3affd0;
+            font-family: 'Lora', serif;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(58, 255, 208, 0.2);
+            border-top-color: #3affd0;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #3a6a5a;
+            font-family: monospace;
+            font-size: 0.65rem;
+            z-index: 10;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .title { font-size: 2.5rem; letter-spacing: 0.1em; }
+            .btn { font-size: 0.7rem; padding: 0.5rem 1.2rem; }
+            .upload-box { padding: 1.5rem; margin: 0 1rem; }
+            .result-card { margin: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="eegCanvas"></canvas>
+
+    <div class="content">
+        <div class="title">EPI<span>WAVE</span></div>
+        <div class="subtitle">UPLOAD EEG FILE • DEEP LEARNING ANALYSIS</div>
+
+        <div class="upload-box" id="uploadBox">
+            <div class="upload-text">Click or drag EEG file here</div>
+            <div class="upload-hint">EDF, CSV, or TXT format</div>
+        </div>
+        
+        <input type="file" id="fileInput" accept=".edf,.csv,.txt">
+
+        <div id="fileName" class="file-name"></div>
+
+        <div id="processing" class="hidden" style="text-align: center; margin-top: 2rem;">
+            <div class="spinner"></div>
+            <div class="upload-hint">Processing EEG signal with AI model...</div>
+            <div class="upload-hint" style="margin-top: 5px;">Running CWT + MobileNetV2 inference...</div>
+        </div>
+
+        <div id="results" class="hidden"></div>
+
+        <div class="button-container">
+            <a href="index.html" class="btn">← BACK TO HOME</a>
+        </div>
+    </div>
+
+    <div class="footer">EDUCATIONAL PLATFORM • CWT + MOBILENETV2 • NOT FOR CLINICAL USE</div>
+
+    <script>
+        const canvas = document.getElementById('eegCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let time = 0;
+        const channels = ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2'];
+        
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        
+        function drawEEG() {
+            if (!ctx) return;
+            
+            ctx.fillStyle = '#0a120e';
+            ctx.fillRect(0, 0, width, height);
+            
+            const channelCount = channels.length;
+            const channelHeight = height / channelCount;
+            
+            ctx.beginPath();
+            ctx.strokeStyle = '#1a4a3a';
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x < width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            
+            for (let i = 1; i < channelCount; i++) {
+                const yPos = i * channelHeight;
+                ctx.beginPath();
+                ctx.moveTo(0, yPos);
+                ctx.lineTo(width, yPos);
+                ctx.stroke();
+            }
+            
+            ctx.font = '11px "Lora", serif';
+            ctx.fillStyle = '#3a9e7a';
+            for (let i = 0; i < channelCount; i++) {
+                const yPos = (i + 0.5) * channelHeight;
+                ctx.fillText(channels[i], 12, yPos + 4);
+                ctx.fillText(channels[i], width - 35, yPos + 4);
+            }
+            
+            const calX = width - 70;
+            const calY = 25;
+            ctx.beginPath();
+            ctx.strokeStyle = '#3a9e7a';
+            ctx.lineWidth = 0.8;
+            ctx.moveTo(calX, calY);
+            ctx.lineTo(calX + 40, calY);
+            ctx.moveTo(calX + 20, calY - 20);
+            ctx.lineTo(calX + 20, calY + 20);
+            ctx.stroke();
+            ctx.fillStyle = '#3a9e7a';
+            ctx.font = '8px "Lora", serif';
+            ctx.fillText('50µV', calX + 45, calY + 4);
+            
+            ctx.fillStyle = '#2a7a5a';
+            ctx.font = '8px "Lora", serif';
+            ctx.fillText('Sensitivity: 10µV/mm', width - 150, 12);
+            ctx.fillText('TC: 0.3s', width - 150, 24);
+            ctx.fillText('HF: 70Hz', width - 150, 36);
+            
+            time += 0.022;
+            requestAnimationFrame(drawEEG);
+        }
+        
+        window.addEventListener('resize', () => resizeCanvas());
+        resizeCanvas();
+        drawEEG();
+        
+        const uploadBox = document.getElementById('uploadBox');
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileName');
+        const processingDiv = document.getElementById('processing');
+        const resultsDiv = document.getElementById('results');
+        
+        uploadBox.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            fileNameDisplay.textContent = `Selected: ${file.name}`;
+            uploadBox.style.opacity = '0.5';
+            processingDiv.classList.remove('hidden');
+            resultsDiv.classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('http://localhost:5000/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                processingDiv.classList.add('hidden');
+                uploadBox.style.opacity = '1';
+                
+                if (result.error) {
+                    resultsDiv.innerHTML = `<div class="result-card"><div class="result-title">Error</div><div>${result.error}</div></div>`;
+                    resultsDiv.classList.remove('hidden');
+                    return;
+                }
+                
+                let displayClass = 'normal';
+                
+                if (result.overall_prediction === 'preictal') {
+                    displayClass = 'preictal';
+                } else if (result.overall_prediction === 'seizure') {
+                    displayClass = 'ictal';
+                }
+                
+                resultsDiv.innerHTML = `
+                    <div class="result-card">
+                        <div class="result-title">Deep Learning Analysis (CWT + MobileNetV2)</div>
+                        <div class="prediction ${displayClass}">
+                            ${result.overall_prediction.toUpperCase()}
+                        </div>
+                        <div class="confidence">
+                            Confidence: ${result.confidence}%
+                        </div>
+                        <div style="color: #5a9e8a; margin-top: 1rem; font-size: 0.8rem;">
+                            Segments analyzed: ${result.segments_analyzed}<br>
+                            Seizure segments: ${result.seizure_segments} | Preictal: ${result.preictal_segments} | Normal: ${result.normal_segments}
+                        </div>
+                    </div>
+                    <div class="button-container" style="margin-top: 1rem;">
+                        <button class="btn" id="newAnalysisBtn">New Analysis</button>
+                    </div>
+                `;
+                
+                resultsDiv.classList.remove('hidden');
+                
+                document.getElementById('newAnalysisBtn')?.addEventListener('click', () => {
+                    resultsDiv.innerHTML = '';
+                    resultsDiv.classList.add('hidden');
+                    fileNameDisplay.textContent = '';
+                    fileInput.value = '';
+                    uploadBox.style.opacity = '1';
+                });
+                
+            } catch (err) {
+                processingDiv.classList.add('hidden');
+                uploadBox.style.opacity = '1';
+                resultsDiv.innerHTML = `<div class="result-card"><div class="result-title">Error</div><div>Cannot connect to AI server. Make sure epiwave_predict_api.py is running on port 5000.</div></div>`;
+                resultsDiv.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

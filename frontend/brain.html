@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>EpiWave - 3D Brain Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Lora', serif;
+            background: #0a0f0d;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #eegCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            display: block;
+        }
+
+        .top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 30px;
+            z-index: 20;
+            background: linear-gradient(180deg, rgba(10, 15, 13, 0.9) 0%, transparent 100%);
+            pointer-events: none;
+            
+        }
+
+        .title {
+            color: #3affd0;
+            font-family: 'Lora', serif;
+            font-size: 1rem;
+            letter-spacing: 0.2em;
+        }
+
+        .title span {
+            font-weight: 600;
+            color: white;
+        }
+
+        .status {
+            color: #3affd0;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(58, 255, 208, 0.3);
+            font-family: 'Lora', serif;
+        }
+
+        .control-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 20;
+            padding: 15px;
+            background: rgba(10, 15, 13, 0.7);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(58, 255, 208, 0.2);
+            border-bottom: 1px solid rgba(58, 255, 208, 0.2);
+        }
+
+        .btn {
+            background: rgba(10, 20, 18, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(58, 255, 208, 0.4);
+            color: #ccfff0;
+            font-size: 0.85rem;
+            font-weight: 400;
+            padding: 10px 24px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Lora', serif;
+            letter-spacing: 0.1em;
+        }
+
+        .btn:hover {
+            background: rgba(58, 255, 208, 0.15);
+            border-color: rgba(58, 255, 208, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .btn-normal { border-color: #5ee169; }
+        .btn-warning { border-color: #f36602; }
+        .btn-seizure { border-color: #c20505; }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 8px 18px;
+            font-size: 0.75rem;
+            pointer-events: auto;
+            z-index: 21;
+            background: rgba(0, 0, 0, 0.6);
+            border-color: #ffffff;
+            color: white;
+            text-decoration: none;
+        }
+
+        .instruction {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            color: #3a6a5a;
+            font-size: 0.65rem;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 5px 12px;
+            border-radius: 15px;
+            pointer-events: none;
+            z-index: 20;
+            font-family: monospace;
+        }
+
+        @media (max-width: 768px) {
+            .btn { padding: 6px 16px; font-size: 0.7rem; }
+            .title { font-size: 0.7rem; }
+            .status { font-size: 0.6rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="eegCanvas"></canvas>
+
+    <div class="top-bar">
+        <div class="title">EPI<span>WAVE</span> // LIVE 3D BRAIN MONITORING </div>
+        <div class="status" id="statusText">STATE: NORMAL</div>
+    </div>
+
+    <a href="index.html" class="btn back-btn">← Back To Home Page</a>
+
+    <div class="control-panel">
+        <button class="btn btn-normal" id="btnNormal">NORMAL</button>
+        <button class="btn btn-warning" id="btnWarning">PRE-SEIZURE</button>
+        <button class="btn btn-seizure" id="btnSeizure">SEIZURE</button>
+    </div>
+
+    <div class="instruction">Drag to rotate | AUTO-ROTATING 360°</div>
+
+    <script>
+        // EEG Background
+        const canvas = document.getElementById('eegCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let time = 0;
+        const channels = ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2'];
+        
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        
+        function drawEEG() {
+            if (!ctx) return;
+            
+            ctx.fillStyle = '#0a120e';
+            ctx.fillRect(0, 0, width, height);
+            
+            const channelCount = channels.length;
+            const channelHeight = height / channelCount;
+            
+            ctx.beginPath();
+            ctx.strokeStyle = '#1a4a3a';
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x < width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            
+            for (let i = 1; i < channelCount; i++) {
+                const yPos = i * channelHeight;
+                ctx.beginPath();
+                ctx.moveTo(0, yPos);
+                ctx.lineTo(width, yPos);
+                ctx.stroke();
+            }
+            
+            ctx.font = '11px "Lora", serif';
+            ctx.fillStyle = '#3a9e7a';
+            for (let i = 0; i < channelCount; i++) {
+                const yPos = (i + 0.5) * channelHeight;
+                ctx.fillText(channels[i], 12, yPos + 4);
+                ctx.fillText(channels[i], width - 35, yPos + 4);
+            }
+            
+            const calX = width - 70;
+            const calY = 25;
+            ctx.beginPath();
+            ctx.strokeStyle = '#3a9e7a';
+            ctx.lineWidth = 0.8;
+            ctx.moveTo(calX, calY);
+            ctx.lineTo(calX + 40, calY);
+            ctx.moveTo(calX + 20, calY - 20);
+            ctx.lineTo(calX + 20, calY + 20);
+            ctx.stroke();
+            ctx.fillStyle = '#3a9e7a';
+            ctx.font = '8px "Lora", serif';
+            ctx.fillText('50µV', calX + 45, calY + 4);
+            
+            ctx.fillStyle = '#2a7a5a';
+            cctx.font = '8px "Lora", serif';
+            ctx.fillText('Sensitivity: 10µV/mm', width - 150, 12);
+            ctx.fillText('TC: 0.3s', width - 150, 24);
+            ctx.fillText('HF: 70Hz', width - 150, 36);
+            
+            time += 0.022;
+            requestAnimationFrame(drawEEG);
+        }
+        
+        window.addEventListener('resize', () => resizeCanvas());
+        resizeCanvas();
+        drawEEG();
+    </script>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+    import * as THREE from 'three';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    
+    // Setup
+    const scene = new THREE.Scene();
+    scene.background = null;
+    
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(-8.0, 0.5, 6.0);
+    
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setClearColor(0x000000, 0);
+    document.body.appendChild(renderer.domElement);
+    renderer.domElement.style.position = 'fixed';
+    renderer.domElement.style.top = '0';
+    renderer.domElement.style.left = '0';
+    renderer.domElement.style.zIndex = '1';
+    
+    
+    let brainModel = null;
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let brainRotationX = 0;
+    let brainRotationY = 0;
+    let autoRotateAngle = 0;
+    let autoRotateEnabled = false;
+    
+    
+    document.addEventListener('mousedown', (event) => {
+        isDragging = true;
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+        autoRotateEnabled = false;  // Stop auto-rotate while dragging
+    });
+    
+    document.addEventListener('mousemove', (event) => {
+        if (!isDragging || !brainModel) return;
+        
+        const deltaX = event.clientX - lastMouseX;
+        const deltaY = event.clientY - lastMouseY;
+        
+        // Rotate brain based on mouse movement
+        brainRotationY += deltaX * 0.008;
+        brainRotationX += deltaY * 0.008;
+        
+        // Apply rotation to brain
+        brainModel.rotation.x = brainRotationX;
+        brainModel.rotation.y = brainRotationY;
+        
+        lastMouseX = event.clientX;
+        lastMouseY = event.clientY;
+    });
+    
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+       
+        setTimeout(() => {
+            if (!isDragging) {
+                autoRotateEnabled = true;
+            }
+        }, 2000);
+    });
+    
+    // Lighting setup
+    const ambientLight = new THREE.AmbientLight(0x6a8a7a, 0.9);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xd0f0e8, 1.0);
+    keyLight.position.set(1.5, 2, 2);
+    scene.add(keyLight);
+
+    const fillLightBottom = new THREE.PointLight(0x5a9a8a, 0.5);
+    fillLightBottom.position.set(0, -1.5, 0);
+    scene.add(fillLightBottom);
+
+    const fillLightFront = new THREE.PointLight(0x8ac0b0, 0.4);
+    fillLightFront.position.set(0, 0.5, 2);
+    scene.add(fillLightFront);
+
+    const rimLight = new THREE.PointLight(0x7affd0, 0.45);
+    rimLight.position.set(-1, 0.8, -2);
+    scene.add(rimLight);
+
+    const sideLightLeft = new THREE.DirectionalLight(0x9accff, 0.4);
+    sideLightLeft.position.set(-1.8, 0.5, 0.5);
+    scene.add(sideLightLeft);
+
+    const sideLightRight = new THREE.DirectionalLight(0x9accff, 0.4);
+    sideLightRight.position.set(1.8, 0.5, 0.5);
+    scene.add(sideLightRight);
+
+    const accentLight = new THREE.PointLight(0x3affd0, 0.5);
+    accentLight.position.set(1.5, 2, 1.5);
+    scene.add(accentLight);
+    
+    // Loading indicator
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.position = 'absolute';
+    loadingDiv.style.bottom = '100px';
+    loadingDiv.style.left = '50%';
+    loadingDiv.style.transform = 'translateX(-50%)';
+    loadingDiv.style.color = '#3affd0';
+    loadingDiv.style.background = 'rgba(0,0,0,0.7)';
+    loadingDiv.style.padding = '10px 20px';
+    loadingDiv.style.borderRadius = '40px';
+    loadingDiv.style.fontFamily = 'Lora';
+    loadingDiv.style.zIndex = '100';
+    loadingDiv.innerHTML = 'LOADING BRAIN...';
+    document.body.appendChild(loadingDiv);
+    
+    // Load the brain model
+    const loader = new OBJLoader();
+    
+    loader.load(
+        'BrainUVs.obj',
+        (obj) => {
+            console.log('Brain loaded successfully');
+            loadingDiv.innerHTML = 'BRAIN LOADED';
+            setTimeout(() => loadingDiv.style.display = 'none', 2000);
+            
+            obj.scale.set(0.006, 0.006, 0.006);  
+            obj.position.set(-5.0, 0, 0);  // Fixed position on left
+            
+            obj.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = new THREE.MeshStandardMaterial({
+                        color: 0xccaa88,
+                        roughness: 0.35,
+                        metalness: 0.08,
+                        emissive: 0x1a2a1a,
+                        emissiveIntensity: 0.03
+                    });
+                    child.castShadow = false;
+                    child.receiveShadow = false;
+                }
+            });
+            
+            scene.add(obj);
+            brainModel = obj;
+            
+          
+            camera.lookAt(brainModel.position);
+        },
+        (xhr) => {
+            const percent = Math.floor(xhr.loaded / xhr.total * 100);
+            loadingDiv.innerHTML = `LOADING BRAIN... ${percent}%`;
+        },
+        (error) => {
+            console.error('Error:', error);
+            loadingDiv.innerHTML = 'BrainUVs.obj not found';
+            loadingDiv.style.backgroundColor = 'rgba(255,0,0,0.7)';
+        }
+    );
+    
+    // State management
+    let currentState = 'normal';
+    
+    function setState(state) {
+        currentState = state;
+        const statusEl = document.getElementById('statusText');
+        let color, intensity;
+        
+        if (state === 'normal') {
+            color = 0x1ded2e;
+            intensity = 0.4;
+            statusEl.innerHTML = 'STATE: NORMAL (SAFE)';
+        } else if (state === 'warning') {
+            color = 0xf16b05;
+            intensity = 0.8;
+            statusEl.innerHTML = 'STATE: PRE-SEIZURE (WARNING)';
+        } else {
+            color = 0xdb0000;
+            intensity = 1.2;
+            statusEl.innerHTML = 'STATE: SEIZURE (CRITICAL)';
+        }
+        
+        accentLight.color.setHex(color);
+        accentLight.intensity = intensity;
+        
+        if (brainModel) {
+            brainModel.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    child.material.color.setHex(color);
+                }
+            });
+        }
+    }
+    
+    document.getElementById('btnNormal').onclick = () => setState('normal');
+    document.getElementById('btnWarning').onclick = () => setState('warning');
+    document.getElementById('btnSeizure').onclick = () => setState('seizure');
+    
+    // Animation loop
+    let animTime = 0;
+    
+   function animate() {
+    requestAnimationFrame(animate);
+    animTime += 0.016;
+    
+    // Auto-rotate the brain in place when not dragging
+    if (autoRotateEnabled && brainModel && !isDragging) {
+        autoRotateAngle += 0.008;
+        brainModel.rotation.y = autoRotateAngle;
+        // Sync manual rotation variables
+        brainRotationY = autoRotateAngle;
+    }
+    
+    // Seizure/warning pulsing effects
+    if (currentState === 'seizure') {
+        const pulse = Math.sin(animTime * 12) * 0.5 + 0.8;
+        accentLight.intensity = pulse * 1.2;
+    } else if (currentState === 'warning') {
+        const pulse = Math.sin(animTime * 6) * 0.3 + 0.6;
+        accentLight.intensity = pulse;
+    }
+    
+    // REMOVED: camera.lookAt(brainModel.position);
+    
+    renderer.render(scene, camera);
+}
+    animate();
+    
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</body>
+</html>

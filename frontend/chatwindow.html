@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EpiWave - Chat with AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Lora', serif;
+            background: #0a0f0d;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #eegCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            display: block;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(58, 255, 208, 0.3);
+        }
+
+        .title {
+            font-size: 2rem;
+            font-weight: 300;
+            color: white;
+            letter-spacing: 0.2em;
+            font-family: 'Lora', serif;
+        }
+
+        .title span {
+            font-weight: 600;
+            color: #3affd0;
+        }
+
+        .subtitle {
+            color: #5a9e8a;
+            font-family: 'Lora', serif;
+            font-size: 0.7rem;
+            margin-top: 5px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message-user {
+            align-self: flex-end;
+            background: rgba(58, 255, 208, 0.15);
+            border: 1px solid #3affd0;
+            border-radius: 20px 20px 5px 20px;
+            padding: 10px 16px;
+            max-width: 70%;
+            color: #ccfff0;
+            font-family: 'Lora', serif;
+        }
+
+        .message-bot {
+            align-self: flex-start;
+            background: rgba(26, 42, 36, 0.9);
+            border: 1px solid rgba(58, 255, 208, 0.3);
+            border-radius: 20px 20px 20px 5px;
+            padding: 10px 16px;
+            max-width: 70%;
+            color: #ccfff0;
+            font-family: 'Lora', serif;
+        }
+
+        .message-system {
+            align-self: center;
+            background: rgba(90, 158, 138, 0.2);
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 0.7rem;
+            color: #5a9e8a;
+            text-align: center;
+        }
+
+        .input-area {
+            padding: 20px;
+            border-top: 1px solid rgba(58, 255, 208, 0.3);
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: rgba(26, 42, 36, 0.9);
+            border: 1px solid rgba(58, 255, 208, 0.4);
+            border-radius: 40px;
+            padding: 12px 20px;
+            color: white;
+            font-family: 'Lora', serif;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: #3affd0;
+        }
+
+        .send-btn {
+            background: rgba(58, 255, 208, 0.15);
+            border: 1px solid #3affd0;
+            border-radius: 40px;
+            padding: 12px 24px;
+            color: #3affd0;
+            font-family: 'Lora', serif;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .send-btn:hover {
+            background: rgba(58, 255, 208, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #ffffff;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 40px;
+            text-decoration: none;
+            font-family: 'Lora', serif;
+            font-size: 0.75rem;
+            z-index: 20;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .title { font-size: 1.2rem; }
+            .message-user, .message-bot { max-width: 85%; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="eegCanvas"></canvas>
+
+    <a href="index.html" class="back-btn">← BACK</a>
+
+    <div class="content">
+        <div class="header">
+            <div class="title">EPI<span>WAVE</span> AI</div>
+            <div class="subtitle">Ask me anything about EEG, seizures, or brain monitoring</div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message-system">Welcome! Ask me about EEG analysis, seizure detection, or how to interpret brain signals.</div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Type your question here...">
+            <button id="sendBtn" class="send-btn">SEND</button>
+        </div>
+    </div>
+
+    <script>
+        // EEG Background
+        const canvas = document.getElementById('eegCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let time = 0;
+        const channels = ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2'];
+        
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        
+        function drawEEG() {
+            if (!ctx) return;
+            
+            ctx.fillStyle = '#0a120e';
+            ctx.fillRect(0, 0, width, height);
+            
+            const channelCount = channels.length;
+            const channelHeight = height / channelCount;
+            
+            ctx.beginPath();
+            ctx.strokeStyle = '#1a4a3a';
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x < width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            
+            for (let i = 1; i < channelCount; i++) {
+                const yPos = i * channelHeight;
+                ctx.beginPath();
+                ctx.moveTo(0, yPos);
+                ctx.lineTo(width, yPos);
+                ctx.stroke();
+            }
+            
+            ctx.font = '11px "Lora", serif';
+            ctx.fillStyle = '#3a9e7a';
+            for (let i = 0; i < channelCount; i++) {
+                const yPos = (i + 0.5) * channelHeight;
+                ctx.fillText(channels[i], 12, yPos + 4);
+                ctx.fillText(channels[i], width - 35, yPos + 4);
+            }
+            
+            for (let idx = 0; idx < channelCount; idx++) {
+                const yBase = (idx + 0.5) * channelHeight;
+                const amplitude = channelHeight * 0.2;
+                
+                ctx.beginPath();
+                ctx.strokeStyle = '#3affd0';
+                ctx.lineWidth = 1.0;
+                
+                let first = true;
+                const speed = 0.5 + idx * 0.05;
+                const phaseOffset = idx * 0.5;
+                
+                for (let x = 0; x < width; x += 2) {
+                    const t = time * speed;
+                    const position = x / width;
+                    
+                    const delta = Math.sin(t * 0.25 + phaseOffset) * 0.35;
+                    const theta = Math.sin(t * 0.6 + position * 1.5) * 0.3;
+                    const alpha = Math.sin(t * 1.0 + position * 2.5) * 0.45;
+                    const beta = Math.sin(t * 1.8 + position * 4) * 0.2;
+                    const smoothWave = Math.sin(t * 0.45 + position * 1.2) * 0.2;
+                    
+                    let signal = (delta + theta + alpha + beta + smoothWave) * amplitude;
+                    const yDraw = yBase + signal;
+                    
+                    if (first) {
+                        ctx.moveTo(x, yDraw);
+                        first = false;
+                    } else {
+                        ctx.lineTo(x, yDraw);
+                    }
+                }
+                ctx.stroke();
+            }
+            
+            const calX = width - 70;
+            const calY = 25;
+            ctx.beginPath();
+            ctx.strokeStyle = '#3a9e7a';
+            ctx.lineWidth = 0.8;
+            ctx.moveTo(calX, calY);
+            ctx.lineTo(calX + 40, calY);
+            ctx.moveTo(calX + 20, calY - 20);
+            ctx.lineTo(calX + 20, calY + 20);
+            ctx.stroke();
+            ctx.fillStyle = '#3a9e7a';
+            ctx.font = '8px Lora';
+            ctx.fillText('50µV', calX + 45, calY + 4);
+            
+            ctx.fillStyle = '#2a7a5a';
+            ctx.fillText('Sensitivity: 10µV/mm', width - 150, 12);
+            ctx.fillText('TC: 0.3s', width - 150, 24);
+            ctx.fillText('HF: 70Hz', width - 150, 36);
+            
+            time += 0.022;
+            requestAnimationFrame(drawEEG);
+        }
+        
+        window.addEventListener('resize', () => resizeCanvas());
+        resizeCanvas();
+        drawEEG();
+    </script>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        let history = [];
+
+        function addMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = type === 'user' ? 'message-user' : 'message-bot';
+            div.innerHTML = text;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showThinking() {
+            const div = document.createElement('div');
+            div.id = 'thinkingMsg';
+            div.className = 'message-bot';
+            div.innerHTML = 'EpiWave is thinking...';
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeThinking() {
+            const thinking = document.getElementById('thinkingMsg');
+            if (thinking) thinking.remove();
+        }
+
+        async function sendMessage() {
+            const userMsg = chatInput.value.trim();
+            if (!userMsg) return;
+
+            addMessage(userMsg, 'user');
+            chatInput.value = '';
+            showThinking();
+
+            try {
+                const res = await fetch('https://epiwave-chatbot.onrender.com/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: userMsg, history: history })
+                });
+                const data = await res.json();
+                removeThinking();
+                addMessage(data.response, 'bot');
+                history.push([userMsg, data.response]);
+                if (history.length > 10) history.shift();
+            } catch (err) {
+                removeThinking();
+                addMessage('Cannot connect to AI server. Make sure api_chat.py is running on port 5001.', 'bot');
+            }
+        }
+
+        sendBtn.onclick = sendMessage;
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
