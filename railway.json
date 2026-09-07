@@ -1,4 +1,4 @@
-{{
+{
   "build": {
     "builder": "NIXPACKS",
     "nixpacksConfigPath": "backend/chatbot/nixpacks.toml",
