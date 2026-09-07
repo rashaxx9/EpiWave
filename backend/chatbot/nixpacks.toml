@@ -2,7 +2,7 @@
 nixPkgs = ["python310", "python310Packages.pip"]
 
 [phases.install]
-cmds = ["cd backend/chatbot && pip install --break-system-packages -r requirements.txt"]
+cmds = ["pip install --break-system-packages -r requirements.txt"]
 
 [start]
-cmd = "cd backend/chatbot && gunicorn api_chat:app"
+cmd = "gunicorn api_chat:app"
