@@ -347,7 +347,7 @@
             showThinking();
 
             try {
-                const res = await fetch('https://epiwave-chatbot.onrender.com/chat', {
+                const res = await fetch('https://epiwave-backend.up.railway.app/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query: userMsg, history: history })
