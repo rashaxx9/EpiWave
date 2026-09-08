@@ -1,10 +1,10 @@
 {
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "cd backend/chatbot && pip install -r requirements.txt"
+    "buildCommand": "pip install -r requirements.txt"
   },
   "deploy": {
-    "startCommand": "cd backend/chatbot && gunicorn api_chat:app",
+    "startCommand": "gunicorn api_chat:app",
     "healthcheckPath": "/health",
     "restartPolicyType": "ON_FAILURE"
   }
