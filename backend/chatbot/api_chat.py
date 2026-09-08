@@ -22,13 +22,13 @@ def chat():
     history = data.get('history', [])
     
     try:
-        has_scans = _get_chroma_collection().count() > 0
-        retrieved = retrieve_chunks(user_query)
-        verified = verify_chunks(retrieved)
+        #has_scans = _get_chroma_collection().count() > 0
+        #retrieved = retrieve_chunks(user_query)
+        #verified = verify_chunks(retrieved)
         
-        response_text = ""
-        for token in stream_response(verified, history, user_query, has_scans=has_scans):
-            response_text += token
+        #response_text = ""
+        #for token in stream_response(verified, history, user_query, has_scans=has_scans):
+           # response_text += token
         
         return jsonify({'response': response_text})
     except Exception as e:
