@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-
+import os
 import ollama
 from openai import OpenAI
 
@@ -9,7 +9,11 @@ from config import LLM_PROVIDER, OLLAMA_MODEL, OPENAI_API_KEY, OPENAI_MODEL
 
 
 def _stream_with_ollama(prompt: str, system_prompt: str) -> Iterator[str]:
-    stream = ollama.chat(
+    # Set the host explicitly before making the call
+    ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    client = ollama.Client(host=ollama_host)
+    
+    stream = client.chat(
         model=OLLAMA_MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
