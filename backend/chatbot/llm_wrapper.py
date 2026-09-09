@@ -9,7 +9,7 @@ from config import LLM_PROVIDER, OLLAMA_MODEL, OPENAI_API_KEY, OPENAI_MODEL
 
 
 def _stream_with_ollama(prompt: str, system_prompt: str) -> Iterator[str]:
-    ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+    ollama_host = os.getenv("OLLAMA_HOST", "http://ollama.railway.internal:11434")
     client = ollama.Client(host=ollama_host)
     
     stream = client.chat(
