@@ -6,6 +6,7 @@
   "deploy": {
     "startCommand": "gunicorn api_chat:app",
     "healthcheckPath": "/health",
-    "restartPolicyType": "ON_FAILURE"
+    "restartPolicyType": "ON_FAILURE",
+    "requestTimeout": 300
   }
 }
