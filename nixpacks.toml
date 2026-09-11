@@ -1,3 +1,6 @@
+[service]
+requestTimeout = 300
+
 [phases.setup]
 nixPkgs = ["python310", "python310Packages.pip"]
 
